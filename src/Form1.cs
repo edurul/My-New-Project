@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -8,9 +8,9 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO;
 using System.Runtime.InteropServices;
-    
+
 namespace rebuild
-{  
+{
     public partial class Form1 : Form
     {
         DataTable dt = new DataTable();
@@ -26,14 +26,14 @@ namespace rebuild
             int p = 0;
             for (p = nombre.IndexOf("_", x); p != -1; x++)
                 p = nombre.IndexOf("_", x);
-            
+
             return nombre.Substring(x);
         }
         void ClearLog()
         {
             textLog.Clear();
             textLog.Text = "Webex Rebuild Tool v0.1\r\n======================\r\n\r\n1) Selecciona el directorio que contiene la sesion de webex. Si conoces la ruta escribela directamente.\r\n\r2) Pulsa el boton 'Go'\r\n3) La herramienta generara el archivo rebuild.arf";
-   
+
 
         }
         void toLog(string texto)
@@ -42,7 +42,7 @@ namespace rebuild
             textLog.SelectionStart = textLog.TextLength;
             textLog.SelectionLength = 1;
             textLog.ScrollToCaret();
-        } 
+        }
         void Rebuild(List<FileItems> ficherosEntrada,string ficheroSalida)
         {
             using (FileStream stream = new FileStream(ficheroSalida, System.IO.FileMode.OpenOrCreate, System.IO.FileAccess.ReadWrite))
@@ -69,9 +69,9 @@ namespace rebuild
                     arf_item[x].e_id = (uint)id;
                     arf_item[x].e_sectionoffset = (uint)Offset;
                     arf_item[x].e_sectionlen=  (uint)f.Length;
-                    
+
                     arf_item[x].e_indice = 0;
-                  
+
                     if (id == 0x7010C || id == 0x7010d)
                         arf_item[x].e_indice = (uint)video;
                     if (id == 0x7010d)
@@ -104,12 +104,12 @@ namespace rebuild
                 toLog("[=] Archivo reconstruido: " + ficheroSalida);
                 MessageBox.Show("Reconstruccion finalizada","Correcto",MessageBoxButtons.OK,  MessageBoxIcon.Information);
             }
-          
-        
+
+
         }
         DataRow AñadeArchivoAGrid(string archivo)
         {
-           
+
             FileInfo f = null;
             FileSystemInfo f1 = null;
             f = new FileInfo(archivo);
@@ -118,7 +118,7 @@ namespace rebuild
             //Get File name of each file name
             dr["Real_Filename"] = f1.Name;
             dr["File_Name"] = GetLastPart(f1.Name);
-            //Get File Type/Extension of each file 
+            //Get File Type/Extension of each file
             dr["File_Type"] = f1.Extension;
             //Get File Size of each file in KB format
             dr["File_Size"] = (f.Length).ToString();
@@ -134,7 +134,7 @@ namespace rebuild
             dt.Columns.Clear();
             //Add Data Grid Columns with name
             dt.Columns.Add("File_Name");
-       
+
             dt.Columns.Add("Real_Filename");
             dt.Columns.Add("File_Type");
             dt.Columns.Add("File_Size");
@@ -145,6 +145,8 @@ namespace rebuild
                 string[] Files_CFG = Directory.GetFiles(ruta, "*.conf", SearchOption.TopDirectoryOnly);
                 string[] Files_STD = Directory.GetFiles(ruta, "*.std", SearchOption.TopDirectoryOnly).OrderBy(o => new FileInfo(o).Name).ToArray();
                 string[] Files_WAV = Directory.GetFiles(ruta, "*.wav", SearchOption.TopDirectoryOnly);
+                string[] Files_WAV = Directory.GetFiles(ruta, "*_20_*.dat", SearchOption.TopDirectoryOnly).OrderBy(o => new FileInfo(o).Name).ToArray();
+                string[] Files_WAV_IDX = Directory.GetFiles(ruta, "*_20_*.idx", SearchOption.TopDirectoryOnly).OrderBy(o => new FileInfo(o).Name).ToArray(); ;
                 string[] Files_VID = Directory.GetFiles(ruta, "*_4_*.dat", SearchOption.TopDirectoryOnly).OrderBy(o => new FileInfo(o).Name).ToArray();
                 string[] Files_VID_IDX = Directory.GetFiles(ruta, "*_4_*.idx", SearchOption.TopDirectoryOnly).OrderBy(o => new FileInfo(o).Name).ToArray(); ;
 
@@ -156,7 +158,7 @@ namespace rebuild
                 string[] Files_BACKUP = Directory.GetFiles(ruta, "*_21_*.dat", SearchOption.TopDirectoryOnly);
                 string[] Files_BACKUP_IDX = Directory.GetFiles(ruta, "*_21_*.idx", SearchOption.TopDirectoryOnly);
 
-             
+
 
                 // Comprobamos el tener al menos un archivo wav y un archivo conf
                 if (Files_CFG.Length != 1/* || Files_WAV.Length != 1*/)
@@ -221,20 +223,35 @@ namespace rebuild
                             toLog("[-] Index file: Not found.");
                         if (Files_VID.Length != Files_VID_IDX.Length)
                             toLog("[-] video or index file not pairs.");
-                    }
 
-                    // AÑADIMOS WAV
-                    if (Files_WAV.Length == 1)
-                    {
-                        toLog("[+] Wav file: " + Path.GetFileName(Files_WAV[0]));
-                        dt.Rows.Add(AñadeArchivoAGrid(Files_WAV[0]));
-                        ListaContenedor.Add(new FileItems(Files_WAV[0], FileItems.tipoSegmento.snd ));
-                    }
-                    else
-                    {
-                        if (Files_WAV.Length == 0)
-                            toLog("[-] Wav file: Not found.");
-                        else
+                  // AÑADIMOS LOS SEGMENTOS DE AUDIO y INDICE AUDIO
+                            if (Files_WAV.Length > 0 && Files_WAV_IDX.Length > 0 && Files_WAV.Length == Files_WAV_IDX.Length)
+                            {
+                                for (int x = 0; x < Files_WAV.Length; x++)
+                                {
+                                    // Añadimos WAV
+                                    toLog(string.Format(@"[+] Wav file {0}/{1} : {2}", x + 1, Files_WAV.Length, Path.GetFileName(Files_WAV[x].ToString())));
+                                    dt.Rows.Add(AñadeArchivoAGrid(Files_WAV[0]));
+                                    ListaContenedor.Add(new FileItems(Files_WAV[x], FileItems.tipoSegmento.snd ));
+                                }
+
+                                    // Añadimos INDICE WAV
+                                    toLog(string.Format(@"[+] Index file {0}/{1} : {2}", x + 1, Files_WAV_IDX.Length, Path.GetFileName(Files_WAV[x].ToString())));
+                                    ListaContenedor.Add(new FileItems(Files_WAV_IDX[x], FileItems.tipoSegmento.snd_idx ));
+                                    dt.Rows.Add(AñadeArchivoAGrid(Files_WAV_IDX[x]));
+
+                                }
+                            }
+                            else
+                            {
+                                if (Files_WAV.Length == 0)
+                                    toLog("[-] Wav file: Not found.");
+                                if (Files_WAV_IDX.Length == 0)
+                                    toLog("[-] Index file: Not found.");
+                                if (Files_WAV.Length != Files_WAV_IDX.Length)
+                                    toLog("[-] Wav or index file not pairs.");
+
+                            else
                             toLog("[-] Wav file: Too many wav files.");
 
                     }
@@ -410,7 +427,7 @@ namespace rebuild
             Go();
         }
 
-        
+
 
     }
     public class FileItems
@@ -423,6 +440,7 @@ namespace rebuild
             video =     0x7010c,
             video_idx = 0x7010d,
             snd =       0x70105,
+            snd_idx =   0x70106,
             mmfin =     0x70114,
             mmfin_idx = 0x70115,
             mmfin_cad = 0x7010A,
@@ -441,25 +459,25 @@ namespace rebuild
         }
     }
     public struct ARF_HEADER
-    {    
-        public UInt32 e_magic;                // Magic number 
+    {
+        public UInt32 e_magic;                // Magic number
         public UInt32 e_unknow;               // Posible ID
         public UInt32 e_filesize;             // File size
-        public UInt32 e_reserved0;            // 
+        public UInt32 e_reserved0;            //
         public UInt32 e_nsections;            // number of sections
-        public UInt32 e_reserved1;            // 
-        
+        public UInt32 e_reserved1;            //
+
     }
     public struct ARF_ITEMES
     {
-        public UInt32 e_id;                
-        public UInt32 e_indice;               
-        public UInt32 e_sectionlen;              
-        public UInt32 e_reserved1;               
-        public UInt32 e_sectionoffset;           
-        public UInt32 e_reserved2;               
-        public UInt32 e_reserved3;               
-        public UInt32 e_reserved4;               
+        public UInt32 e_id;
+        public UInt32 e_indice;
+        public UInt32 e_sectionlen;
+        public UInt32 e_reserved1;
+        public UInt32 e_sectionoffset;
+        public UInt32 e_reserved2;
+        public UInt32 e_reserved3;
+        public UInt32 e_reserved4;
 
     }
 
